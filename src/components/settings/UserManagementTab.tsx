@@ -19,6 +19,7 @@ import { SystemUser, UserPermissions } from '@/types/settings';
 import { rolePermissionsMatrix } from '@/data/settingsData';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 import { createUserFn, updateUserFn, deleteUserFn } from '@/lib/functionsClient';
 
 interface UserManagementTabProps {
@@ -59,7 +60,6 @@ const roleIcons = {
 
 const UserManagementTab = ({ users, onUsersChange }: UserManagementTabProps) => {
   const { user } = useAuth();
-  console.log('AUTH USER:', user);
   if (!user || user.role !== 'admin') {
     return (
       <Card className="glass-card border-border/30">
@@ -116,8 +116,14 @@ const UserManagementTab = ({ users, onUsersChange }: UserManagementTabProps) => 
 
   const handleAddUser = async (data: z.infer<typeof userSchema>) => {
     try {
+      // Verify user has a valid session before calling Edge Function
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        throw new Error('Your session has expired. Please sign in again.');
+      }
+
       const res = await createUserFn(data.email, data.password, data.role);
-      const userId = (res as any)?.userId ?? `user-${Date.now()}`;
+      const userId = (res as any)?.userId ?? (res as any)?.id ?? `user-${Date.now()}`;
       const newUser: SystemUser = {
         id: userId,
         username: data.username,
@@ -200,7 +206,7 @@ const UserManagementTab = ({ users, onUsersChange }: UserManagementTabProps) => 
               username: data.username,
               email: data.email,
               role: data.role,
-              permissions: data.permissions,
+              permissions: data.permissions as UserPermissions,
               lastLogin: u.lastLogin,
               status: u.status,
             }

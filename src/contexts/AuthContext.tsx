@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
 
 type Role = 'admin' | 'analyst' | 'viewer';
 
@@ -43,19 +43,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
     (async () => {
       try {
         const { data } = await supabase.auth.getSession();
-        const session = (data as any)?.session;
-        // debug access token for inspection (temporary)
-        const accessToken = session?.access_token ?? session?.provider_token;
-        if (accessToken) {
-          try {
-            const payload = JSON.parse(atob(accessToken.split('.')[1]));
-            console.debug('access_token payload (session init):', payload);
-          } catch (e) {
-            console.debug('Failed to decode access token (session init)', e);
-          }
-        } else {
-          console.debug('No access token present in session (session init)', { session });
-        }
+        const session = data?.session;
         const supaUser = session?.user;
         const id = supaUser?.id;
         const email = supaUser?.email;
@@ -66,7 +54,6 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
             .select('role')
             .eq('id', id)
             .single();
-          console.debug('profiles.fetch ->', { profile, error });
           let name: string | undefined = undefined;
           let role: Role | undefined = undefined;
           // prefer name from auth user metadata if present
@@ -74,8 +61,6 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
           if (metaName) name = metaName;
           if (!error && profile) {
             role = (profile as any).role ?? undefined;
-          } else if (error) {
-            console.error('Failed to load profile during session init', error);
           }
           setUser({ id, email, name, role });
         }
@@ -91,20 +76,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
       // Use Supabase Auth to sign in securely
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) return { ok: false, error: error.message };
-      // debug access token returned from signIn (temporary)
-      const signInSession = (data as any)?.session;
-      const signInToken = signInSession?.access_token ?? signInSession?.provider_token;
-      if (signInToken) {
-        try {
-          const payload = JSON.parse(atob(signInToken.split('.')[1]));
-          console.debug('access_token payload (after login):', payload);
-        } catch (e) {
-          console.debug('Failed to decode access token (after login)', e);
-        }
-      } else {
-        console.debug('No access token present after signIn', { signInSession });
-      }
-      const supaUser = (data as any)?.user ?? (data as any)?.session?.user;
+      const supaUser = data?.user ?? data?.session?.user;
       const id = supaUser?.id;
       const userEmail = supaUser?.email ?? email;
 
@@ -118,14 +90,11 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
             .select('role')
             .eq('id', id)
             .single();
-          console.debug('profiles.fetch after login ->', { profile, pErr });
           // prefer name from auth user metadata if present
           const metaName = supaUser?.user_metadata?.full_name ?? supaUser?.user_metadata?.name;
           if (metaName) name = metaName;
           if (!pErr && profile) {
             role = (profile as any).role ?? undefined;
-          } else if (pErr) {
-            console.error('Failed to load profile after login', pErr);
           }
         }
       } catch (e) {
