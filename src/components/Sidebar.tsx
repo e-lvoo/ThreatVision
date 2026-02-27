@@ -14,91 +14,105 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import Logo from '@/components/Logo';
 
-const navItems = [
-  { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-  { icon: Bell, label: 'Alerts', path: '/dashboard/alerts' },
-  { icon: Clock, label: 'Detection History', path: '/dashboard/history' },
-  { icon: Settings, label: 'Settings', path: '/dashboard/settings' },
+const NAV_ITEMS = [
+  { icon: LayoutDashboard, label: 'Dashboard',         path: '/dashboard' },
+  { icon: Bell,            label: 'Alerts',            path: '/dashboard/alerts' },
+  { icon: Clock,           label: 'Detection History', path: '/dashboard/history' },
+  { icon: Settings,        label: 'Settings',          path: '/dashboard/settings' },
 ];
 
 const Sidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
-  const location = useLocation();
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    navigate('/login');
-  };
+  const location  = useLocation();
+  const navigate  = useNavigate();
 
   return (
     <aside
       className={cn(
-        'fixed left-0 top-0 h-screen glass-card border-r border-border/50 z-50 transition-all duration-300 flex flex-col',
+        'fixed left-0 top-0 h-screen bg-card border-r border-border/60 z-50 transition-all duration-300 flex flex-col',
         collapsed ? 'w-16' : 'w-64'
       )}
     >
       {/* Logo */}
-      <div className="p-4 border-b border-border/50 flex items-center justify-between">
-        {collapsed ? (
-          <Shield className="h-8 w-8 text-primary mx-auto" />
-        ) : (
-          <Logo size="md" />
-        )}
+      <div className={cn(
+        'h-14 border-b border-border/40 flex items-center shrink-0',
+        collapsed ? 'justify-center px-0' : 'px-5'
+      )}>
+        {collapsed
+          ? <Shield className="h-5 w-5 text-primary" />
+          : <Logo size="md" />
+        }
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-3 space-y-1 overflow-y-auto scrollbar-cyber">
-        {navItems.map((item) => {
+      <nav className="flex-1 p-2.5 space-y-0.5 overflow-y-auto">
+        {NAV_ITEMS.map((item) => {
           const isActive = location.pathname === item.path;
           return (
             <Link
               key={item.path}
               to={item.path}
+              title={collapsed ? item.label : undefined}
               className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group relative',
+                'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors duration-150 group relative',
                 isActive
-                  ? 'bg-primary/10 text-primary border border-primary/20'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  ? 'bg-muted text-foreground font-medium'
+                  : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
               )}
             >
-              <item.icon className={cn('h-5 w-5 flex-shrink-0', isActive && 'text-primary')} />
-              {!collapsed && (
-                <span className="font-medium">{item.label}</span>
-              )}
+              {/* Active indicator */}
               {isActive && (
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-r-full" />
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-primary rounded-r-full" />
+              )}
+
+              <item.icon className={cn(
+                'h-4 w-4 shrink-0 transition-colors',
+                isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'
+              )} />
+
+              {!collapsed && (
+                <span className="text-sm">{item.label}</span>
               )}
             </Link>
           );
         })}
       </nav>
 
+      {/* Section label — only when expanded */}
+      {!collapsed && (
+        <div className="px-4 pb-1">
+          <span className="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-widest">
+            Account
+          </span>
+        </div>
+      )}
+
       {/* Logout */}
-      <div className="p-3 border-t border-border/50">
+      <div className="p-2.5 border-t border-border/40">
         <button
-          onClick={handleLogout}
+          onClick={() => navigate('/login')}
+          title={collapsed ? 'Logout' : undefined}
           className={cn(
-            'flex items-center gap-3 px-3 py-2.5 rounded-lg w-full transition-all duration-200',
-            'text-muted-foreground hover:bg-destructive/10 hover:text-destructive'
+            'flex items-center gap-3 px-3 py-2.5 rounded-lg w-full transition-colors duration-150 text-sm',
+            'text-muted-foreground hover:bg-red-500/8 hover:text-red-500'
           )}
         >
-          <LogOut className="h-5 w-5 flex-shrink-0" />
-          {!collapsed && <span className="font-medium">Logout</span>}
+          <LogOut className="h-4 w-4 shrink-0" />
+          {!collapsed && <span>Logout</span>}
         </button>
       </div>
 
-      {/* Collapse button */}
+      {/* Collapse toggle */}
       <Button
         variant="ghost"
         size="icon"
-        onClick={() => setCollapsed(!collapsed)}
-        className="absolute -right-3 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-card border border-border hover:bg-muted"
+        onClick={() => setCollapsed(c => !c)}
+        className="absolute -right-3 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-card border border-border/60 hover:bg-muted shadow-sm"
       >
-        {collapsed ? (
-          <ChevronRight className="h-3 w-3" />
-        ) : (
-          <ChevronLeft className="h-3 w-3" />
-        )}
+        {collapsed
+          ? <ChevronRight className="h-3 w-3 text-muted-foreground" />
+          : <ChevronLeft  className="h-3 w-3 text-muted-foreground" />
+        }
       </Button>
     </aside>
   );
