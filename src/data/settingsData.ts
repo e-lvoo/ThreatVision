@@ -84,7 +84,6 @@ export const mockUsers: SystemUser[] = [
     permissions: {
       viewAlerts: true,
       acknowledgeAlerts: true,
-      manageModels: true,
       accessSettings: true,
       manageUsers: true,
     },
@@ -99,7 +98,6 @@ export const mockUsers: SystemUser[] = [
     permissions: {
       viewAlerts: true,
       acknowledgeAlerts: true,
-      manageModels: true,
       accessSettings: false,
       manageUsers: false,
     },
@@ -114,7 +112,6 @@ export const mockUsers: SystemUser[] = [
     permissions: {
       viewAlerts: true,
       acknowledgeAlerts: true,
-      manageModels: false,
       accessSettings: false,
       manageUsers: false,
     },
@@ -129,7 +126,6 @@ export const mockUsers: SystemUser[] = [
     permissions: {
       viewAlerts: true,
       acknowledgeAlerts: false,
-      manageModels: false,
       accessSettings: false,
       manageUsers: false,
     },
@@ -139,7 +135,6 @@ export const mockUsers: SystemUser[] = [
 export const rolePermissionsMatrix = {
   viewAlerts: { admin: true, analyst: true, viewer: true },
   acknowledgeAlerts: { admin: true, analyst: true, viewer: false },
-  manageModels: { admin: true, analyst: true, viewer: false },
   accessSettings: { admin: true, analyst: false, viewer: false },
   manageUsers: { admin: true, analyst: false, viewer: false },
 };
@@ -184,7 +179,6 @@ export const mockWebhooks: WebhookConfig[] = [
       alertCreated: true,
       alertAcknowledged: false,
       alertResolved: true,
-      modelDeployed: true,
     },
     enabled: true,
     lastTriggered: subHours(new Date(), 1),
@@ -196,7 +190,6 @@ export const mockWebhooks: WebhookConfig[] = [
       alertCreated: true,
       alertAcknowledged: true,
       alertResolved: true,
-      modelDeployed: false,
     },
     enabled: true,
     lastTriggered: subHours(new Date(), 3),

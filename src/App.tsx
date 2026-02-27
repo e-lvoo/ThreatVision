@@ -11,7 +11,6 @@ import Dashboard from "./pages/Dashboard";
 import Alerts from "./pages/Alerts";
 import Profile from "./pages/Profile";
 import History from "./pages/History";
-import Models from "./pages/Models";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import DashboardLayout from "./layouts/DashboardLayout";
@@ -43,11 +42,6 @@ const App = () => (
           <Route path="/dashboard/history" element={
             <DashboardLayout>
               <History />
-            </DashboardLayout>
-          } />
-          <Route path="/dashboard/models" element={
-            <DashboardLayout>
-              <Models />
             </DashboardLayout>
           } />
           <Route path="/dashboard/settings" element={<Settings />} />

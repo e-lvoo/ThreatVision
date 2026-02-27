@@ -1,0 +1,6 @@
+I{
+  "tasks": {
+    "start": "deno run -A --watch=./,../../../.env.local index.ts",
+    "dev": "deno run -A --watch=./,../../../.env.local index.ts"
+  }
+}

@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from 'date-fns';
-import { Plus, Edit, UserX, Trash2, Check, X, Shield, Eye, Users } from 'lucide-react';
+import { Plus, Edit, UserX, Trash2, Check, X, Shield, Eye, Users, Loader } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,7 +20,7 @@ import { rolePermissionsMatrix } from '@/data/settingsData';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { createUserFn, updateUserFn, deleteUserFn } from '@/lib/functionsClient';
+import { createUserFn, updateUserFn, deleteUserFn, getUsersFn } from '@/lib/functionsClient';
 
 interface UserManagementTabProps {
   users: SystemUser[];
@@ -36,7 +36,6 @@ const userSchema = z.object({
   permissions: z.object({
     viewAlerts: z.boolean(),
     acknowledgeAlerts: z.boolean(),
-    manageModels: z.boolean(),
     accessSettings: z.boolean(),
     manageUsers: z.boolean(),
   }),
@@ -58,8 +57,39 @@ const roleIcons = {
   viewer: <Users className="h-3 w-3" />,
 };
 
-const UserManagementTab = ({ users, onUsersChange }: UserManagementTabProps) => {
+const UserManagementTab = ({ users: initialUsers, onUsersChange }: UserManagementTabProps) => {
   const { user } = useAuth();
+  const [users, setUsers] = useState<SystemUser[]>(initialUsers || []);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  // Fetch users from Supabase on mount
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setIsLoading(true);
+        setLoadError(null);
+        const fetchedUsers = await getUsersFn();
+        setUsers(fetchedUsers);
+        if (onUsersChange) {
+          onUsersChange(fetchedUsers);
+        }
+      } catch (error: any) {
+        console.error('Error fetching users:', error);
+        setLoadError(error.message || 'Failed to load users');
+        toast({ 
+          title: 'Error Loading Users', 
+          description: error.message || 'Failed to load users from server',
+          variant: 'destructive' 
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, [onUsersChange]);
+
   if (!user || user.role !== 'admin') {
     return (
       <Card className="glass-card border-border/30">
@@ -91,7 +121,6 @@ const UserManagementTab = ({ users, onUsersChange }: UserManagementTabProps) => 
       permissions: {
         viewAlerts: true,
         acknowledgeAlerts: false,
-        manageModels: false,
         accessSettings: false,
         manageUsers: false,
       },
@@ -104,7 +133,6 @@ const UserManagementTab = ({ users, onUsersChange }: UserManagementTabProps) => 
   const getDefaultPermissions = (role: 'admin' | 'analyst' | 'viewer'): UserPermissions => ({
     viewAlerts: rolePermissionsMatrix.viewAlerts[role],
     acknowledgeAlerts: rolePermissionsMatrix.acknowledgeAlerts[role],
-    manageModels: rolePermissionsMatrix.manageModels[role],
     accessSettings: rolePermissionsMatrix.accessSettings[role],
     manageUsers: rolePermissionsMatrix.manageUsers[role],
   });
@@ -122,24 +150,28 @@ const UserManagementTab = ({ users, onUsersChange }: UserManagementTabProps) => 
         throw new Error('Your session has expired. Please sign in again.');
       }
 
-      const res = await createUserFn(data.email, data.password, data.role);
-      const userId = (res as any)?.userId ?? (res as any)?.id ?? `user-${Date.now()}`;
-      const newUser: SystemUser = {
-        id: userId,
+      // Convert permissions object to array format expected by Edge Function
+      const permissionsArray = [];
+      if (data.permissions.viewAlerts) permissionsArray.push('view-alert');
+      if (data.permissions.acknowledgeAlerts) permissionsArray.push('acknowledge-alert');
+      if (data.permissions.accessSettings) permissionsArray.push('access-settings');
+      if (data.permissions.manageUsers) permissionsArray.push('manage-user');
+
+      await createUserFn({
         username: data.username,
         email: data.email,
+        password: data.password,
         role: data.role,
-        status: 'active' as const,
-        lastLogin: new Date(),
-        permissions: {
-          viewAlerts: data.permissions.viewAlerts,
-          acknowledgeAlerts: data.permissions.acknowledgeAlerts,
-          manageModels: data.permissions.manageModels,
-          accessSettings: data.permissions.accessSettings,
-          manageUsers: data.permissions.manageUsers,
-        },
-      };
-      onUsersChange([...users, newUser]);
+        permissions: permissionsArray,
+      });
+      
+      // Refresh users list from server
+      const updatedUsers = await getUsersFn();
+      setUsers(updatedUsers);
+      if (onUsersChange) {
+        onUsersChange(updatedUsers);
+      }
+      
       setIsAddUserOpen(false);
       form.reset();
       toast({ title: 'User Created', description: `${data.username} has been added.` });
@@ -158,7 +190,6 @@ const UserManagementTab = ({ users, onUsersChange }: UserManagementTabProps) => 
     permissions: z.object({
       viewAlerts: z.boolean(),
       acknowledgeAlerts: z.boolean(),
-      manageModels: z.boolean(),
       accessSettings: z.boolean(),
       manageUsers: z.boolean(),
     }),
@@ -199,20 +230,14 @@ const UserManagementTab = ({ users, onUsersChange }: UserManagementTabProps) => 
     if (!editUser) return;
     try {
       await updateUserFn(editUser.id, data.email, data.password, data.role);
-      const updated: SystemUser[] = users.map(u =>
-        u.id === editUser.id
-          ? {
-              ...u,
-              username: data.username,
-              email: data.email,
-              role: data.role,
-              permissions: data.permissions as UserPermissions,
-              lastLogin: u.lastLogin,
-              status: u.status,
-            }
-          : u
-      );
-      onUsersChange(updated);
+      
+      // Refresh users list from server
+      const updatedUsers = await getUsersFn();
+      setUsers(updatedUsers);
+      if (onUsersChange) {
+        onUsersChange(updatedUsers);
+      }
+      
       setIsEditOpen(false);
       setEditUser(null);
       toast({ title: 'User Updated', description: `${data.username} has been updated.` });
@@ -237,7 +262,14 @@ const UserManagementTab = ({ users, onUsersChange }: UserManagementTabProps) => 
     if (!deleteConfirm.user) return;
     try {
       await deleteUserFn(deleteConfirm.user.id);
-      onUsersChange(users.filter(u => u.id !== deleteConfirm.user!.id));
+      
+      // Refresh users list from server
+      const updatedUsers = await getUsersFn();
+      setUsers(updatedUsers);
+      if (onUsersChange) {
+        onUsersChange(updatedUsers);
+      }
+      
       toast({ title: 'User Deleted', description: `${deleteConfirm.user.username} has been removed.`, variant: 'destructive' });
       setDeleteConfirm({ isOpen: false, user: null });
     } catch (e: any) {
@@ -248,7 +280,6 @@ const UserManagementTab = ({ users, onUsersChange }: UserManagementTabProps) => 
   const permissionLabels = {
     viewAlerts: 'View Alerts',
     acknowledgeAlerts: 'Acknowledge Alerts',
-    manageModels: 'Manage Models',
     accessSettings: 'Access Settings',
     manageUsers: 'Manage Users',
   };
@@ -263,63 +294,92 @@ const UserManagementTab = ({ users, onUsersChange }: UserManagementTabProps) => 
               <CardTitle>Users</CardTitle>
               <CardDescription>Manage system users and their access</CardDescription>
             </div>
-            <Button onClick={() => setIsAddUserOpen(true)}>
+            <Button onClick={() => setIsAddUserOpen(true)} disabled={isLoading}>
               <Plus className="h-4 w-4 mr-2" />
               Add New User
             </Button>
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow className="border-border/50 hover:bg-transparent">
-                <TableHead>Username</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Last Login</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.id} className="border-border/30 hover:bg-muted/30">
-                  <TableCell className="font-medium">{user.username}</TableCell>
-                  <TableCell className="text-muted-foreground">{user.email}</TableCell>
-                  <TableCell>
-                    <Badge className={cn('gap-1', roleColors[user.role])}>
-                      {roleIcons[user.role]}
-                      {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={user.status === 'active' ? 'border-green-500/30 text-green-400' : 'border-muted text-muted-foreground'}>
-                      {user.status === 'active' ? <Check className="h-3 w-3 mr-1" /> : <X className="h-3 w-3 mr-1" />}
-                      {user.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{format(user.lastLogin, 'MMM dd, HH:mm')}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => openEditDialog(user)}><Edit className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDeactivateUser(user)}>
-                        <UserX className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="text-destructive hover:text-destructive"
-                        onClick={() => setDeleteConfirm({ isOpen: true, user })}
-                        disabled={user.role === 'admin' && users.filter(u => u.role === 'admin').length === 1}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader className="h-6 w-6 animate-spin text-muted-foreground" />
+              <span className="ml-2 text-muted-foreground">Loading users...</span>
+            </div>
+          ) : loadError ? (
+            <div className="text-center py-8 text-destructive">
+              <p>Failed to load users: {loadError}</p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="mt-4"
+                onClick={() => {
+                  setIsLoading(true);
+                  getUsersFn()
+                    .then(data => {
+                      setUsers(data);
+                      setLoadError(null);
+                      if (onUsersChange) onUsersChange(data);
+                    })
+                    .catch(err => setLoadError(err.message))
+                    .finally(() => setIsLoading(false));
+                }}
+              >
+                Retry
+              </Button>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="border-border/50 hover:bg-transparent">
+                  <TableHead>Username</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Last Login</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {users.map((user) => (
+                  <TableRow key={user.id} className="border-border/30 hover:bg-muted/30">
+                    <TableCell className="font-medium">{user.username}</TableCell>
+                    <TableCell className="text-muted-foreground">{user.email}</TableCell>
+                    <TableCell>
+                      <Badge className={cn('gap-1', roleColors[user.role])}>
+                        {roleIcons[user.role]}
+                        {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={user.status === 'active' ? 'border-green-500/30 text-green-400' : 'border-muted text-muted-foreground'}>
+                        {user.status === 'active' ? <Check className="h-3 w-3 mr-1" /> : <X className="h-3 w-3 mr-1" />}
+                        {user.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{format(user.lastLogin, 'MMM dd, HH:mm')}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => openEditDialog(user)}><Edit className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleDeactivateUser(user)}>
+                          <UserX className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => setDeleteConfirm({ isOpen: true, user })}
+                          disabled={user.role === 'admin' && users.filter(u => u.role === 'admin').length === 1}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 

@@ -30,7 +30,6 @@ export interface SystemUser {
 export interface UserPermissions {
   viewAlerts: boolean;
   acknowledgeAlerts: boolean;
-  manageModels: boolean;
   accessSettings: boolean;
   manageUsers: boolean;
 }
@@ -42,7 +41,6 @@ export interface WebhookConfig {
     alertCreated: boolean;
     alertAcknowledged: boolean;
     alertResolved: boolean;
-    modelDeployed: boolean;
   };
   enabled: boolean;
   lastTriggered?: Date;

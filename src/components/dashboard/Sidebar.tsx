@@ -4,7 +4,6 @@ import {
   LayoutDashboard, 
   Bell, 
   Clock, 
-  Cpu, 
   Settings, 
   LogOut,
   ChevronLeft,
@@ -19,7 +18,6 @@ const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
   { icon: Bell, label: 'Alerts', path: '/dashboard/alerts' },
   { icon: Clock, label: 'Detection History', path: '/dashboard/history' },
-  { icon: Cpu, label: 'Models', path: '/dashboard/models' },
   { icon: Settings, label: 'Settings', path: '/dashboard/settings' },
 ];
 

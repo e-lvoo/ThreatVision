@@ -52,7 +52,6 @@ const NotificationsTab = ({
     alertCreated: true,
     alertAcknowledged: false,
     alertResolved: true,
-    modelDeployed: false,
   });
 
   const handleEmailChange = <K extends keyof EmailConfig>(key: K, value: EmailConfig[K]) => {
@@ -102,7 +101,7 @@ const NotificationsTab = ({
     };
     onWebhooksChange([...webhooks, newWebhook]);
     setNewWebhookUrl('');
-    setWebhookEvents({ alertCreated: true, alertAcknowledged: false, alertResolved: true, modelDeployed: false });
+    setWebhookEvents({ alertCreated: true, alertAcknowledged: false, alertResolved: true });
     toast({ title: 'Webhook Added', description: 'New webhook endpoint configured.' });
   };
 
@@ -314,7 +313,6 @@ const NotificationsTab = ({
                   { key: 'alertCreated', label: 'New Alert Created' },
                   { key: 'alertAcknowledged', label: 'Alert Acknowledged' },
                   { key: 'alertResolved', label: 'Alert Resolved' },
-                  { key: 'modelDeployed', label: 'Model Deployed' },
                 ].map(({ key, label }) => (
                   <div key={key} className="flex items-center gap-2">
                     <Checkbox
