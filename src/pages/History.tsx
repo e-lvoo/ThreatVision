@@ -96,19 +96,19 @@ const TimeRangeSelector = ({ selectedRange, customRange, onRangeChange, onCustom
 // ===== INTERNAL COMPONENT: SummaryStatsRow =====
 interface SummaryStatsRowProps {
   summary: {
-    total: number;
-    malicious: number;
-    benign: number;
-    confidence: number;
+    totalDetections: number;
+    maliciousDetections: number;
+    benignDetections: number;
+    averageConfidence: number;
   };
 }
 
 const SummaryStatsRow = ({ summary }: SummaryStatsRowProps) => {
   const stats = [
-    { label: 'Total Detections', value: summary.total, icon: Target, trend: 12.5, trendUp: true },
-    { label: 'Malicious', value: summary.malicious, icon: ShieldAlert, trend: 8.3, trendUp: true },
-    { label: 'Benign', value: summary.benign, icon: ShieldCheck, trend: 5.1, trendUp: false },
-    { label: 'Avg Confidence', value: `${summary.confidence}%`, icon: Activity, trend: 2.5, trendUp: true },
+    { label: 'Total Detections', value: summary.totalDetections, icon: Target, trend: 12.5, trendUp: true },
+    { label: 'Malicious', value: summary.maliciousDetections, icon: ShieldAlert, trend: 8.3, trendUp: true },
+    { label: 'Benign', value: summary.benignDetections, icon: ShieldCheck, trend: 5.1, trendUp: false },
+    { label: 'Avg Confidence', value: `${summary.averageConfidence}%`, icon: Activity, trend: 2.5, trendUp: true },
   ];
   
   const variantStyles: { [key: string]: string } = {
@@ -260,7 +260,8 @@ interface GaugeChartProps {
 const GaugeChart = ({ value, label, color }: GaugeChartProps) => {
   const radius = 45;
   const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (value / 100) * circumference;
+  const safeValue = typeof value === 'number' && !isNaN(value) ? Math.min(100, Math.max(0, value)) : 0;
+  const offset = circumference - (safeValue / 100) * circumference;
 
   return (
     <div className="flex flex-col items-center">
@@ -282,7 +283,7 @@ const GaugeChart = ({ value, label, color }: GaugeChartProps) => {
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center">
-            <p className="text-2xl font-bold text-foreground">{value}%</p>
+            <p className="text-2xl font-bold text-foreground">{Math.round(safeValue)}%</p>
             <p className="text-xs text-muted-foreground">{label}</p>
           </div>
         </div>
@@ -310,7 +311,7 @@ const PerformanceGauges = ({ modelPerformance }: PerformanceGaugesProps) => {
         {metrics.map((metric) => (
           <GaugeChart
             key={metric.key}
-            value={Math.round(modelPerformance[metric.key] * 100)}
+            value={currentMetrics[metric.key as keyof typeof currentMetrics] * 100}
             label={metric.label}
             color={metric.color}
           />
@@ -327,7 +328,7 @@ interface TopSourceIPsTableProps {
 }
 
 const TopSourceIPsTable = ({ data, onViewFullList }: TopSourceIPsTableProps) => {
-  const maxCount = Math.max(...data.map(d => d.count), 1);
+  const maxCount = Math.max(...data.map(d => d.detectionsCount), 1);
 
   return (
     <Card className="glass-card p-6 border border-border/30 backdrop-blur-md bg-card/30">
@@ -345,10 +346,10 @@ const TopSourceIPsTable = ({ data, onViewFullList }: TopSourceIPsTableProps) => 
             <div className="flex-1 h-2 bg-muted/20 rounded-full overflow-hidden">
               <div
                 className={cn("h-full rounded-full transition-all", item.maliciousPercentage > 50 ? "bg-red-500" : item.maliciousPercentage > 25 ? "bg-yellow-500" : "bg-green-500")}
-                style={{ width: `${(item.count / maxCount) * 100}%` }}
+                style={{ width: `${(item.detectionsCount / maxCount) * 100}%` }}
               />
             </div>
-            <span className="text-xs text-muted-foreground w-12 text-right">{item.count}</span>
+            <span className="text-xs text-muted-foreground w-12 text-right">{item.detectionsCount}</span>
           </div>
         ))}
       </div>
@@ -610,7 +611,7 @@ const History = () => {
       </div>
 
       <div className="animate-fade-in-up" style={{ animationDelay: "600ms" }}>
-        <ModelPerformanceChart data={modelPerformance.timeline} />
+        <ModelPerformanceChart data={modelPerformance} />
       </div>
 
       <div className="animate-fade-in-up" style={{ animationDelay: "700ms" }}>
