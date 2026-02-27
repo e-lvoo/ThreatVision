@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Bell, 
-  Clock, 
-  Settings, 
+import {
+  LayoutDashboard,
+  Bell,
+  Clock,
+  Settings,
   LogOut,
   ChevronLeft,
   ChevronRight,
