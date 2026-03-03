@@ -1,14 +1,11 @@
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import HeroSection from '@/components/landing/HeroSection';
 
 const Index = () => {
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    navigate('/login');
-  }, [navigate]);
-
-  return null;
+  return (
+    <main className="w-full min-h-screen bg-[#050816]">
+      <HeroSection />
+    </main>
+  );
 };
 
 export default Index;

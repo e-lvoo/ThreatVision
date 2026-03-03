@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Bell, 
-  Clock, 
-  Settings, 
+import {
+  LayoutDashboard,
+  Bell,
+  Clock,
+  Settings,
+  Cpu,
   LogOut,
   ChevronLeft,
   ChevronRight,
-  Shield
+  Shield,
+  Activity
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -16,6 +18,7 @@ import Logo from '@/components/Logo';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
+  { icon: Activity, label: 'Network Analysis', path: '/dashboard/analysis' },
   { icon: Bell, label: 'Alerts', path: '/dashboard/alerts' },
   { icon: Clock, label: 'Detection History', path: '/dashboard/history' },
   { icon: Settings, label: 'Settings', path: '/dashboard/settings' },
