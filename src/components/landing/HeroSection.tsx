@@ -12,7 +12,7 @@ import { Link } from 'react-router-dom';
 const PacketShader = {
     vertexShader: `
     varying vec2 vUv;
-    varying float vProgress;
+    varying float vAlpha;
     attribute float aProgress;
     attribute float aSpeed;
     attribute float aOffset;
@@ -20,28 +20,31 @@ const PacketShader = {
     
     void main() {
       vUv = uv;
-      vProgress = mod(aProgress + uTime * aSpeed * 0.1, 1.0);
+      float progress = mod(aProgress + uTime * aSpeed * 0.05, 1.0);
       
       vec3 pos = position;
-      // Movement from left to right (-10 to 10)
-      pos.x = (vProgress * 20.0) - 10.0;
-      pos.y += sin(uTime + aOffset) * 0.5;
-      pos.z += cos(uTime * 0.5 + aOffset) * 0.5;
+      pos.x = (progress * 30.0) - 15.0;
+      pos.y += sin(uTime * 1.5 + aOffset) * 0.8;
+      pos.z += cos(uTime * 0.8 + aOffset) * 0.5;
       
+      // Face camera logic simplified
       vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
       gl_Position = projectionMatrix * mvPosition;
-      gl_PointSize = 4.0 * (1.0 / -mvPosition.z);
+      
+      // Size attenuation
+      gl_PointSize = 12.0 * (1.0 / -mvPosition.z);
+      vAlpha = smoothstep(0.0, 0.1, progress) * (1.0 - smoothstep(0.8, 1.0, progress));
     }
   `,
     fragmentShader: `
     varying vec2 vUv;
-    varying float vProgress;
+    varying float vAlpha;
     uniform vec3 uColor;
     void main() {
       float dist = length(gl_PointCoord - vec2(0.5));
       if (dist > 0.5) discard;
-      float alpha = 1.0 - smoothstep(0.4, 0.5, dist);
-      gl_FragColor = vec4(uColor, alpha * 0.8);
+      float strength = (1.0 - dist * 2.0);
+      gl_FragColor = vec4(uColor, strength * vAlpha * 0.9);
     }
   `
 };
@@ -50,27 +53,36 @@ const ShieldShader = {
     vertexShader: `
     varying vec2 vUv;
     varying vec3 vPosition;
+    varying vec3 vNormal;
     void main() {
       vUv = uv;
       vPosition = position;
+      vNormal = normalize(normalMatrix * normal);
       gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
     }
   `,
     fragmentShader: `
     varying vec2 vUv;
     varying vec3 vPosition;
+    varying vec3 vNormal;
     uniform float uTime;
     uniform float uIntensity;
     
     void main() {
-      // Hexagonal-like grid pattern
-      float grid = abs(sin(vPosition.x * 10.0 + uTime)) * abs(sin(vPosition.y * 10.0 + uTime));
+      // Hexagonal-like grid pattern with pulse
+      float grid = abs(sin(vPosition.x * 12.0 + uTime)) * abs(sin(vPosition.y * 12.0 + uTime));
       float hex = smoothstep(0.4, 0.5, grid);
       
-      vec3 color = vec3(0.0, 0.5, 1.0); // Cyan/Blue
-      float edge = 1.0 - length(vUv - 0.5) * 2.0;
+      vec3 color = vec3(0.1, 0.6, 1.0); // Electric Cyan
       
-      gl_FragColor = vec4(color, hex * edge * uIntensity * 0.3);
+      // Rim lighting effect
+      float rim = 1.0 - max(dot(vNormal, vec3(0.0, 0.0, 1.0)), 0.0);
+      rim = pow(rim, 3.0);
+      
+      float pulse = 0.8 + 0.2 * sin(uTime * 2.0);
+      float finalAlpha = (hex * 0.2 + rim * 0.8) * uIntensity * pulse;
+      
+      gl_FragColor = vec4(color, finalAlpha);
     }
   `
 };
@@ -248,9 +260,9 @@ const HeroSection = () => {
             </div>
 
             {/* UI Overlay */}
-            <div className="relative z-10 w-full h-full container mx-auto flex items-center justify-between pointer-events-none">
+            <div className="relative z-10 w-full h-full px-6 md:px-16 lg:px-24 flex items-center justify-between pointer-events-none">
                 {/* Left Side: Brand */}
-                <div className="max-w-2xl pointer-events-auto animate-fade-in-up">
+                <div className="flex-1 max-w-2xl pointer-events-auto animate-fade-in-up">
                     <div className="flex items-center gap-3 mb-6">
                         <div className="p-2 bg-primary/10 rounded-xl border border-primary/20 shadow-glow-primary">
                             <Shield className="h-8 w-8 text-primary" />
@@ -258,8 +270,8 @@ const HeroSection = () => {
                         <span className="text-3xl font-bold tracking-tighter text-white">ThreatVision</span>
                     </div>
 
-                    <h1 className="text-6xl md:text-8xl font-bold text-white mb-6 tracking-tight leading-none">
-                        Adaptive <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-cyber-pink">AI-Powered</span> <br />
+                    <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold text-white mb-6 tracking-tight leading-[1.1]">
+                        Adaptive <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-cyan-400 to-blue-600">AI-Powered</span> <br />
                         Network Defense
                     </h1>
 
@@ -267,14 +279,25 @@ const HeroSection = () => {
                         Protect your digital infrastructure with real-time autonomous threat detection powered by advanced neural sequence classification.
                     </p>
 
-                    <div className="flex gap-4">
-                        <Button size="lg" className="h-14 px-8 text-lg font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-full shadow-glow-primary group" asChild>
+                    <div className="flex flex-wrap gap-4 mt-8">
+                        <Button size="lg" className="h-12 px-8 text-base font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-full shadow-glow-primary group" asChild>
                             <Link to="/register">
                                 Get Started
-                                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                                <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                             </Link>
                         </Button>
-                        <Button size="lg" variant="outline" className="h-14 px-8 text-lg font-bold rounded-full border-white/10 text-white hover:bg-white/5 backdrop-blur-sm">
+                        <Button
+                            size="lg"
+                            variant="outline"
+                            className="h-12 px-8 text-base font-bold rounded-full border-white/20 text-white hover:bg-white/10 backdrop-blur-md transition-all active:scale-95"
+                            onClick={() => {
+                                document.getElementById('features-section')?.scrollIntoView({ behavior: 'smooth' });
+                                // Fallback: if no section, target a demo element or show a message
+                                if (!document.getElementById('features-section')) {
+                                    window.scrollTo({ top: window.innerHeight, behavior: 'smooth' });
+                                }
+                            }}
+                        >
                             View Demo
                         </Button>
                     </div>
