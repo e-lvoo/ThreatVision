@@ -56,7 +56,7 @@ const Settings = () => {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 pl-6">
         {/* Page Header */}
         <div className="animate-fade-in">
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">

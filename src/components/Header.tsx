@@ -49,10 +49,7 @@ const Header = ({ sidebarCollapsed }: HeaderProps) => {
 
   return (
     <header
-      className={cn(
-        'fixed top-0 right-0 h-14 bg-card border-b border-border/60 z-40 transition-all duration-300 flex items-center justify-between px-5',
-        sidebarCollapsed ? 'left-16' : 'left-64'
-      )}
+      className="fixed top-0 right-0 left-60 h-14 bg-card border-b border-border/60 z-40 transition-all duration-300 flex items-center justify-between px-5"
     >
       {/* Search */}
       <div className="relative w-80">

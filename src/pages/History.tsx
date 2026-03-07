@@ -686,7 +686,7 @@ const History = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pl-6">
 
       {/* Page Header */}
       <div className="animate-fade-in">
