@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
-import Sidebar from '@/components/dashboard/Sidebar';
-import Header from '@/components/dashboard/Header';
+import Sidebar from '@/components/Sidebar';
+import Header from '@/components/Header';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -18,7 +18,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       <Header />
       
       <main className="pt-16 min-h-screen relative z-10 transition-all duration-300">
-        <div className="pl-64 p-6">
+        <div className="pl-60 p-6">
           {children}
         </div>
       </main>

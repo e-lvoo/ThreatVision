@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle, Shield, Link as LinkIcon, Info } from "lucide-react";
+import { AlertCircle, CheckCircle, Shield, Link as LinkIcon, Info, Cpu, Activity } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const NetworkAnalysis = () => {

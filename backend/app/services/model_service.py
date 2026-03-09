@@ -3,7 +3,7 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch.nn.functional as F
 import logging
 import time
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -12,8 +12,8 @@ class ModelService:
     def __init__(self):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model_name = "gates04/DistilBERT-Network-Intrusion-Detection"
-        self.tokenizer = None
-        self.model = None
+        self.tokenizer: Optional[Any] = None
+        self.model: Optional[Any] = None
         self.labels = ["Benign", "Malicious"] # Adjust based on actual model labels if different
         self.threshold = 0.8 # Default threshold
 
@@ -60,6 +60,9 @@ class ModelService:
                 "alert_generated": False,
                 "error": "Model failed to load"
             }
+        
+        assert t is not None, "Tokenizer must be loaded"
+        assert m is not None, "Model must be loaded"
 
         inputs = t(text, return_tensors="pt", truncation=True, padding=True).to(self.device)
         
@@ -90,6 +93,9 @@ class ModelService:
         m = self.model
         if t is None or m is None:
             return [{ "error": "Model unavailable" } for _ in texts]
+        
+        assert t is not None, "Tokenizer must be loaded"
+        assert m is not None, "Model must be loaded"
 
         inputs = t(texts, return_tensors="pt", truncation=True, padding=True).to(self.device)
         

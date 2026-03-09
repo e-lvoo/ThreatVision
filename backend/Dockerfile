@@ -1,5 +1,5 @@
 # Use an official Python runtime as a parent image
-FROM python:3.10-slim-buster as builder
+FROM python:3.10-slim-bullseye as builder
 
 # Set env variables
 ENV PYTHONDONTWRITEBYTECODE 1
@@ -19,7 +19,7 @@ RUN pip install --upgrade pip && \
   pip install --no-cache-dir -r requirements.txt
 
 # Final stage
-FROM python:3.10-slim-buster
+FROM python:3.10-slim-bullseye
 
 WORKDIR /app
 

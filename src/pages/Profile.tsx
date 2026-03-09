@@ -1,225 +1,419 @@
-import { useMemo } from 'react';
-import { User, ShieldCheck, BarChart2 } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+/**
+ * TEMP DESIGN MODE
+ * This page has been flattened for redesign purposes.
+ * Components will be extracted back into modular files after UI redesign.
+ */
+
+import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Input } from '@/components/ui/input';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { mockUsers } from '@/data/settingsData';
-import { mockAlertsData } from '@/data/alertsData';
-import { formatDistanceToNow } from 'date-fns';
+import { Input } from '@/components/ui/input';
+import { Copy, Mail, Lock, Shield, Activity, Eye, EyeOff, Key, Bell, CheckCircle2, AlertTriangle, RefreshCw, BookOpen, LogOut } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
+import { mockAlerts } from '@/data/mockData';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
-const Profile = () => {
-  // Select a default analyst user from mock data
-  const user = mockUsers.find(u => u.role === 'analyst') || mockUsers[0];
 
-  const recentAlerts = useMemo(() => {
-    return mockAlertsData.slice(0, 6);
-  }, []);
+// ===== SHARED =====
+const severityDot: Record<string, string> = {
+  critical: 'bg-red-500',
+  high:     'bg-orange-500',
+  medium:   'bg-amber-500',
+  low:      'bg-blue-500',
+};
+
+const SectionCard = ({ children, className }: { children: React.ReactNode; className?: string }) => (
+  <div className={cn('rounded-2xl border border-border/60 bg-card', className)}>
+    {children}
+  </div>
+);
+
+const SectionHeader = ({ icon: Icon, title, description }: { icon: React.ElementType; title: string; description?: string }) => (
+  <div className="flex items-center gap-3 px-6 py-5 border-b border-border/40">
+    <div className="p-1.5 rounded-lg bg-muted">
+      <Icon className="h-4 w-4 text-muted-foreground" />
+    </div>
+    <div>
+      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+      {description && <p className="text-xs text-muted-foreground">{description}</p>}
+    </div>
+  </div>
+);
+
+const DetailRow = ({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) => (
+  <div className={cn('flex items-center justify-between py-3 border-b border-border/40 last:border-0', className)}>
+    <span className="text-sm text-muted-foreground">{label}</span>
+    <div className="text-sm text-foreground">{children}</div>
+  </div>
+);
+
+
+// ===== INTERNAL COMPONENT: ProfileCard =====
+const ProfileCard = ({ user }: { user: any }) => {
+  const initials = user?.name?.split(' ').map((n: string) => n[0]).join('') || 'U';
+  const roleLabel = user?.role === 'admin' ? 'Administrator' : user?.role ?? 'Security Analyst';
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-          <User className="h-6 w-6" />
-          Analyst Profile
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Personal settings and operational preferences for the security analyst.
-        </p>
-      </div>
+    <SectionCard>
+      {/* Cover strip */}
+      <div className="h-24 rounded-t-2xl bg-gradient-to-r from-primary/20 via-primary/10 to-transparent" />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <div className="flex items-center gap-4">
-              <Avatar className="h-20 w-20">
-                <AvatarImage src={`/og-threatvision.svg`} alt={user.username} />
-                <AvatarFallback>{user.username?.[0]?.toUpperCase() ?? 'A'}</AvatarFallback>
-              </Avatar>
-              <div>
-                <h2 className="text-xl font-semibold">{user.username}</h2>
-                <p className="text-sm text-muted-foreground">
-                  {user.role === 'analyst' ? 'Security Analyst' : user.role}
-                </p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Last login: {formatDistanceToNow(new Date(user.lastLogin), { addSuffix: true })}
-                </p>
-              </div>
-              <div className="ml-auto flex gap-2">
-                <Button variant="cyber-outline" size="sm">Edit Profile</Button>
-                <Button variant="ghost" size="sm">Message</Button>
-              </div>
+      <div className="px-6 pb-6">
+        {/* Avatar */}
+        <div className="flex justify-center mb-4">
+          <Avatar className="h-16 w-16 border-4 border-card">
+            <AvatarImage
+              src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email || 'default'}`}
+              alt={user?.name || 'User'}
+            />
+            <AvatarFallback className="bg-primary/10 text-primary font-semibold text-lg">
+              {initials}
+            </AvatarFallback>
+          </Avatar>
+        </div>
+
+        {/* Info */}
+        <div className="text-center">
+          <h2 className="text-lg font-semibold text-foreground">{user?.name || 'User'}</h2>
+          <p className="text-sm text-muted-foreground">{user?.email}</p>
+          <div className="flex flex-col items-center gap-1.5 mt-3">
+            <Badge className="rounded-full px-2.5 py-0.5 text-xs bg-primary/10 text-primary border-0">
+              {roleLabel}
+            </Badge>
+            <Badge className="rounded-full px-2.5 py-0.5 text-xs bg-emerald-500/10 text-emerald-500 border-0">
+              Active
+            </Badge>
+          </div>
+        </div>
+
+        {/* Stats strip */}
+        <div className="mt-5 grid grid-cols-3 gap-3 pt-5 border-t border-border/40">
+          {[
+            { label: 'Alerts Reviewed', value: '1,284' },
+            { label: 'Threats Resolved', value: '97' },
+            { label: 'Accuracy Rate', value: '98.2%' },
+          ].map(({ label, value }) => (
+            <div key={label} className="text-center">
+              <p className="text-base font-semibold text-foreground">{value}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
             </div>
-          </CardHeader>
-
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label className="text-xs">Email</Label>
-                <Input value={user.email} readOnly />
-              </div>
-
-              <div>
-                <Label className="text-xs">Role</Label>
-                <Input value={user.role} readOnly />
-              </div>
-
-              <div>
-                <Label className="text-xs">Organization</Label>
-                <Input value="ThreatVision Lab" readOnly />
-              </div>
-
-              <div>
-                <Label className="text-xs">Account Status</Label>
-                <Input value={user.status} readOnly />
-              </div>
-            </div>
-
-            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label className="text-xs">API Key</Label>
-                <div className="flex gap-2">
-                  <Input value="•••••••••••••••••••" readOnly />
-                  <Button variant="outline" size="sm">Reset</Button>
-                </div>
-              </div>
-
-              <div>
-                <Label className="text-xs">Detection Model Access</Label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select model access" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No access</SelectItem>
-                    <SelectItem value="read">Read-only</SelectItem>
-                    <SelectItem value="full">Full (deploy)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </CardContent>
-
-          <CardFooter>
-            <div className="flex items-center gap-4 w-full">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-primary" />
-                <div className="text-sm">
-                  <div className="font-medium">Permissions</div>
-                  <div className="text-muted-foreground text-xs">
-                    View and acknowledge alerts
-                  </div>
-                </div>
-              </div>
-
-              <div className="ml-auto">
-                <Button variant="cyber">Save Changes</Button>
-              </div>
-            </div>
-          </CardFooter>
-        </Card>
-
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Detection Preferences</CardTitle>
-              <CardDescription>
-                Control alerting thresholds and notification preferences.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm font-medium">Minimum severity</div>
-                    <div className="text-xs text-muted-foreground">
-                      Alerts below this severity will be ignored for notifications
-                    </div>
-                  </div>
-                  <div className="w-40">
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Medium" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="low">Low</SelectItem>
-                        <SelectItem value="medium">Medium</SelectItem>
-                        <SelectItem value="high">High</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm font-medium">Browser notifications</div>
-                    <div className="text-xs text-muted-foreground">
-                      Enable desktop alerts for new incidents
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Switch id="notif" defaultChecked />
-                    <Label htmlFor="notif" className="text-sm text-muted-foreground">
-                      Enabled
-                    </Label>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Activity Overview</CardTitle>
-              <CardDescription>Recent detections and analyst activity</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-4">
-                <BarChart2 className="h-10 w-10 text-primary" />
-                <div>
-                  <div className="text-sm font-medium">Assigned alerts</div>
-                  <div className="text-muted-foreground text-xs">
-                    {recentAlerts.length} recent alerts
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          ))}
         </div>
       </div>
+    </SectionCard>
+  );
+};
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Alerts</CardTitle>
-          <CardDescription>Latest alerts observed across the network</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-3">
-            {recentAlerts.map(a => (
-              <div
-                key={a.id}
-                className="flex items-center justify-between p-3 rounded-md border border-border bg-muted/30"
-              >
-                <div>
-                  <div className="font-medium">{a.threatType}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {a.sourceIp} → {a.destinationIp} • {a.protocol}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="font-mono text-sm">{a.severity.toUpperCase()}</div>
-                  <div className="text-xs text-muted-foreground">
-                    Confidence: {a.confidenceScore}%
-                  </div>
+
+// ===== INTERNAL COMPONENT: AccountDetails =====
+const AccountDetails = ({ user }: { user: any }) => {
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+
+  const handleChangePassword = () => {
+    toast({ title: 'Password Updated', description: 'Your password has been changed successfully.' });
+    setShowPasswordForm(false);
+  };
+
+  return (
+    <SectionCard>
+      <SectionHeader icon={Lock} title="Account Details" description="Manage your login credentials" />
+
+      <div className="px-6 py-4">
+        <DetailRow label="Email Address">
+          <div className="flex items-center gap-2">
+            <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="font-mono text-sm">{user?.email}</span>
+          </div>
+        </DetailRow>
+
+        <DetailRow label="Password">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowPasswordForm(v => !v)}
+            className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted"
+          >
+            {showPasswordForm ? 'Cancel' : 'Change Password'}
+          </Button>
+        </DetailRow>
+
+        {showPasswordForm && (
+          <div className="mt-4 space-y-3 pt-4 border-t border-border/40">
+            {[
+              { id: 'current', label: 'Current Password', show: showCurrent, toggle: () => setShowCurrent(v => !v) },
+              { id: 'new',     label: 'New Password',     show: showNew,     toggle: () => setShowNew(v => !v) },
+            ].map(({ id, label, show, toggle }) => (
+              <div key={id} className="space-y-1.5">
+                <Label htmlFor={id} className="text-xs text-muted-foreground">{label}</Label>
+                <div className="relative">
+                  <Input
+                    id={id}
+                    type={show ? 'text' : 'password'}
+                    className="h-9 text-sm border-border/60 bg-background pr-9"
+                  />
+                  <button
+                    type="button"
+                    onClick={toggle}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  </button>
                 </div>
               </div>
             ))}
+            <Button size="sm" onClick={handleChangePassword} className="h-9 px-4 text-sm mt-1">
+              Update Password
+            </Button>
           </div>
-        </CardContent>
-      </Card>
+        )}
+
+        <DetailRow label="Account Created" className="mt-0">
+          <span className="text-muted-foreground text-xs">March 12, 2024</span>
+        </DetailRow>
+
+        <DetailRow label="Last Login">
+          <span className="text-muted-foreground text-xs">Today at 09:41 AM</span>
+        </DetailRow>
+      </div>
+    </SectionCard>
+  );
+};
+
+
+// ===== INTERNAL COMPONENT: ApiKeyCard =====
+const ApiKeyCard = () => {
+  const [visible, setVisible] = useState(false);
+  const API_KEY = 'sk-proj-abc123xyz789defghijklmnopqrst';
+  const masked  = 'sk-proj-••••••••••••••••••••••••••';
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(API_KEY);
+    toast({ title: 'API Key Copied', description: 'Successfully copied to clipboard.' });
+  };
+
+  const handleRegenerate = () => {
+    toast({ title: 'API Key Regenerated', description: 'Your new key is ready to use.' });
+  };
+
+  return (
+    <SectionCard>
+      <SectionHeader icon={Key} title="API Key" description="Use this key to authenticate API requests" />
+
+      <div className="px-6 py-5 space-y-4">
+        <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-background border border-border/60">
+          <code className="text-xs text-muted-foreground flex-1 font-mono">
+            {visible ? API_KEY : masked}
+          </code>
+          <button
+            onClick={() => setVisible(v => !v)}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {visible ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+          </button>
+          <div className="w-px h-4 bg-border/60" />
+          <button
+            onClick={handleCopy}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Copy className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRegenerate}
+            className="h-8 px-3 text-xs border-border/60 text-muted-foreground hover:text-foreground"
+          >
+            <RefreshCw className="h-3 w-3 mr-1.5" />
+            Regenerate
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 px-3 text-xs border-border/60 text-muted-foreground hover:text-foreground"
+          >
+            <BookOpen className="h-3 w-3 mr-1.5" />
+            Documentation
+          </Button>
+        </div>
+      </div>
+    </SectionCard>
+  );
+};
+
+
+// ===== INTERNAL COMPONENT: NotificationPreferences =====
+const PREFERENCES = [
+  { id: 'email-notifs',    label: 'Email Notifications',    description: 'Receive alerts via email',                      defaultChecked: true  },
+  { id: 'critical-only',  label: 'Critical Alerts Only',    description: 'Skip low and medium severity notifications',     defaultChecked: true  },
+  { id: 'weekly-digest',  label: 'Weekly Digest',           description: 'Summary report every Monday',                   defaultChecked: false },
+  { id: 'auto-ack',       label: 'Auto-acknowledge Low',    description: 'Automatically acknowledge low severity alerts', defaultChecked: false },
+];
+
+const NotificationPreferences = () => {
+  const [prefs, setPrefs] = useState<Record<string, boolean>>(
+    Object.fromEntries(PREFERENCES.map(p => [p.id, p.defaultChecked]))
+  );
+
+  const handleToggle = (id: string, value: boolean) => {
+    setPrefs(prev => ({ ...prev, [id]: value }));
+    const pref = PREFERENCES.find(p => p.id === id);
+    toast({ title: value ? 'Setting Enabled' : 'Setting Disabled', description: pref?.label });
+  };
+
+  return (
+    <SectionCard>
+      <SectionHeader icon={Bell} title="Notifications & Preferences" description="Control how you receive alerts and updates" />
+
+      <div className="px-6 py-2">
+        {PREFERENCES.map((pref, i) => (
+          <div
+            key={pref.id}
+            className={cn(
+              'flex items-center justify-between py-4',
+              i < PREFERENCES.length - 1 && 'border-b border-border/40'
+            )}
+          >
+            <div>
+              <Label htmlFor={pref.id} className="text-sm font-medium text-foreground cursor-pointer">
+                {pref.label}
+              </Label>
+              <p className="text-xs text-muted-foreground mt-0.5">{pref.description}</p>
+            </div>
+            <Switch
+              id={pref.id}
+              checked={prefs[pref.id]}
+              onCheckedChange={(v) => handleToggle(pref.id, v)}
+            />
+          </div>
+        ))}
+      </div>
+    </SectionCard>
+  );
+};
+
+
+// ===== INTERNAL COMPONENT: RecentActivity =====
+const RecentActivity = ({ alerts }: { alerts: any[] }) => {
+  const primary = alerts.filter(a => a.severity === 'critical' || a.severity === 'high').slice(0, 5);
+
+  return (
+    <SectionCard>
+      <SectionHeader icon={Activity} title="Recent Activity" description="Your latest reviewed alerts" />
+
+      <div className="px-6 py-2">
+        {primary.length > 0 ? (
+          primary.map((alert, i) => (
+            <div
+              key={i}
+              className={cn(
+                'flex items-center gap-3 py-3.5',
+                i < primary.length - 1 && 'border-b border-border/40'
+              )}
+            >
+              <div className={cn('h-2 w-2 rounded-full shrink-0', severityDot[alert.severity])} />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-foreground truncate">{alert.title}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{alert.sourceIp || alert.source || '—'}</p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    'text-xs rounded-full px-2 py-0.5 border capitalize',
+                    alert.severity === 'critical' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                    alert.severity === 'high'     ? 'bg-orange-500/10 text-orange-500 border-orange-500/20' :
+                    'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                  )}
+                >
+                  {alert.severity}
+                </Badge>
+                <span className="text-xs text-muted-foreground/60 w-16 text-right">
+                  {alert.timestamp instanceof Date
+                    ? format(alert.timestamp, 'HH:mm')
+                    : String(alert.timestamp)}
+                </span>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="flex flex-col items-center gap-2 py-10 text-muted-foreground">
+            <CheckCircle2 className="h-8 w-8 opacity-20" />
+            <p className="text-sm">No recent alerts</p>
+          </div>
+        )}
+      </div>
+    </SectionCard>
+  );
+};
+
+
+// ===== INTERNAL COMPONENT: DangerZone =====
+const DangerZone = () => {
+  const handleDeactivate = () => {
+    toast({ title: 'Account Deactivated', description: 'Your account has been scheduled for deactivation.' });
+  };
+
+  return (
+    <SectionCard>
+      <div className="absolute inset-x-0 top-0 h-0.5 bg-red-500 rounded-t-2xl" />
+      <SectionHeader icon={AlertTriangle} title="Danger Zone" description="Irreversible account actions" />
+      <div className="px-6 py-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <p className="text-sm font-medium text-foreground">Deactivate Account</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Permanently disable your account and revoke all access.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleDeactivate}
+          className="h-9 px-4 text-sm border-red-500/30 text-red-500 hover:bg-red-500/10 hover:text-red-500 shrink-0"
+        >
+          <LogOut className="h-3.5 w-3.5 mr-2" />
+          Deactivate
+        </Button>
+      </div>
+    </SectionCard>
+  );
+};
+
+
+// ===== MAIN PAGE COMPONENT =====
+const Profile = () => {
+  const { user } = useAuth();
+  const recentAlerts = mockAlerts.slice(0, 10);
+
+  return (
+    <div className="pl-6 flex flex-col items-center justify-center min-h-screen">
+      <div className="max-w-2xl w-full space-y-5 animate-fade-in">
+
+        {/* Page Header */}
+        <div className="text-center">
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">Profile Settings</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Manage your account and preferences</p>
+        </div>
+
+      <ProfileCard user={user} />
+      <AccountDetails user={user} />
+      <ApiKeyCard />
+      <NotificationPreferences />
+      <RecentActivity alerts={recentAlerts} />
+      <div className="relative">
+        <DangerZone />
+      </div>
+
+      </div>
     </div>
   );
 };
