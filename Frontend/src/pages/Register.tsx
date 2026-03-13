@@ -164,9 +164,7 @@ const Register = () => {
                   </SelectTrigger>
                   <SelectContent className="bg-cyber-dark border-primary/30 border-2">
                     <SelectItem value="Analyst" className="focus:bg-primary focus:text-primary-foreground cursor-pointer">Security Analyst</SelectItem>
-                    <SelectItem value="Admin" className="focus:bg-primary focus:text-primary-foreground cursor-pointer">Administrator</SelectItem>
                     <SelectItem value="Network Admin" className="focus:bg-primary focus:text-primary-foreground cursor-pointer">Network Admin</SelectItem>
-                    <SelectItem value="Viewer" className="focus:bg-primary focus:text-primary-foreground cursor-pointer">Viewer</SelectItem>
                   </SelectContent>
                 </Select>
                 {errors.role && (

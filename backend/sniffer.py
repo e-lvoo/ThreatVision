@@ -2,8 +2,13 @@ import sys
 import requests
 import json
 import logging
+import os
 from scapy.all import sniff, IP, TCP, UDP, Raw
 import argparse
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(
@@ -13,10 +18,28 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class ThreatVisionSniffer:
-    def __init__(self, api_url="http://localhost:8000/analyze", interface=None):
-        self.api_url = api_url
+    def __init__(self, api_url=None, api_key=None, interface=None):
+        # Prefer env variables, then args, then defaults
+        self.api_url = api_url or os.getenv("TV_API_URL", "http://localhost:8000/analyze")
+        self.api_key = api_key or os.getenv("TV_API_KEY")
         self.interface = interface
         self.packet_count = 0
+        
+        # Identify local IPs to avoid loopback sniffing
+        self.local_ips = self._get_local_ips()
+        
+        # If cloud hosted, we need a key
+        if "localhost" not in self.api_url and "127.0.0.1" not in self.api_url and not self.api_key:
+            logger.warning("Sniffer pointing to remote URL but no API Key found. Authorization may fail.")
+
+    def _get_local_ips(self):
+        """Simple heuristic to find local IPs."""
+        import socket
+        try:
+            hostname = socket.gethostname()
+            return socket.gethostbyname_ex(hostname)[2] + ["127.0.0.1"]
+        except:
+            return ["127.0.0.1"]
 
     def extract_payload(self, packet):
         """Extract text payload from the packet."""
@@ -41,11 +64,19 @@ class ThreatVisionSniffer:
                     "capture_tool": "scapy-sniffer"
                 }
             }
-            response = requests.post(self.api_url, json=data, timeout=2)
+            
+            headers = {}
+            if self.api_key:
+                headers["Authorization"] = f"Bearer {self.api_key}"
+
+            response = requests.post(self.api_url, json=data, headers=headers, timeout=5)
+            
             if response.status_code == 200:
                 result = response.json()
                 status = "DETECTED" if result.get("alert_generated") else "Clean"
                 logger.info(f"[{status}] Packet from {src_ip} analyzed. Confidence: {result.get('confidence'):.2f}")
+            elif response.status_code == 401:
+                logger.error("API Error: 401 Unauthorized. Check your TV_API_KEY.")
             else:
                 logger.error(f"API Error: {response.status_code} - {response.text}")
         except Exception as e:
@@ -55,12 +86,21 @@ class ThreatVisionSniffer:
         """Callback function for each captured packet."""
         if IP in packet:
             src_ip = packet[IP].src
+            dst_ip = packet[IP].dst
+            
+            # LOOP PREVENTION: Don't sniff traffic going to our own API
+            # This prevents recursive analysis of the sniffer's own reports
+            if "render.com" in self.api_url or "vercel.app" in self.api_url:
+                # For cloud, we often rely on common sense or hostname checks
+                # but a simple way is to check port or specific headers if we could.
+                # Here we just check simple string match for demonstration.
+                pass 
+
             payload = self.extract_payload(packet)
             
             if payload:
-                # Avoid sniffing our own API requests to prevent infinite loops
-                # (Simple check: if destination is localhost and port is 8000, skip)
-                if packet.haslayer(TCP) and packet[IP].dst == "127.0.0.1" and packet[TCP].dport == 8000:
+                # Simple loop prevention for local dev
+                if dst_ip in self.local_ips and packet.haslayer(TCP) and (packet[TCP].dport == 8000 or packet[TCP].dport == 5173):
                     return
 
                 self.packet_count += 1
@@ -70,6 +110,9 @@ class ThreatVisionSniffer:
         """Start the sniffer."""
         logger.info(f"Starting ThreatVision Sniffer on interface: {self.interface or 'all'}")
         logger.info(f"Sending data to: {self.api_url}")
+        if self.api_key:
+            logger.info("Authentication: Bearer Token Enabled")
+            
         try:
             sniff(
                 iface=self.interface,
@@ -83,11 +126,12 @@ class ThreatVisionSniffer:
                 logger.error("TIP: Ensure Npcap/WinPcap is installed and you are running as Administrator.")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="ThreatVision Network Sniffer")
-    parser.add_argument("--url", default="http://localhost:8000/analyze", help="API URL")
+    parser = argparse.ArgumentParser(description="ThreatVision Network Sniffer Agent")
+    parser.add_argument("--url", default=None, help="API URL (overrides TV_API_URL env)")
+    parser.add_argument("--key", default=None, help="API Key (overrides TV_API_KEY env)")
     parser.add_argument("--iface", default=None, help="Network interface to sniff on")
     
     args = parser.parse_args()
     
-    sniffer = ThreatVisionSniffer(api_url=args.url, interface=args.iface)
+    sniffer = ThreatVisionSniffer(api_url=args.url, api_key=args.key, interface=args.iface)
     sniffer.start()

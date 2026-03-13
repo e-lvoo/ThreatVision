@@ -13,6 +13,7 @@ type AuthUser = {
 type AuthContextType = {
   user: AuthUser | null;
   login: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
+  register: (email: string, password: string, name: string, role: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => void;
 };
 
@@ -110,6 +111,54 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
     }
   };
 
+  const register = async (email: string, password: string, name: string, role: string) => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: name,
+            role: role.toLowerCase(),
+          },
+        },
+      });
+
+      if (error) return { ok: false, error: error.message };
+
+      const supaUser = data?.user;
+      if (supaUser) {
+        // Create profile in profiles table
+        const { error: profileError } = await supabase.from('profiles').insert([
+          {
+            id: supaUser.id,
+            email: email,
+            role: role.toLowerCase(),
+          },
+        ]);
+
+        if (profileError) {
+          console.error('Error creating profile:', profileError);
+          // We don't necessarily fail registration if profile insert fails, 
+          // but it's good to know.
+        }
+
+        const authUser: AuthUser = {
+          id: supaUser.id,
+          email: supaUser.email || email,
+          name: name,
+          role: role.toLowerCase() as Role,
+        };
+        setUser(authUser);
+      }
+
+      return { ok: true };
+    } catch (err: any) {
+      console.error('Auth register error', err);
+      return { ok: false, error: err?.message || 'Unknown error' };
+    }
+  };
+
   const logout = async () => {
     try {
       await supabase.auth.signOut();
@@ -120,7 +169,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ user, login, register, logout }}>{children}</AuthContext.Provider>
   );
 };
 
