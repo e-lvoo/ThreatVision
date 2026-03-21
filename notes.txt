@@ -1,0 +1,21 @@
+In ThreatVision, Docker is used to package the entire backend system—including the AI models, Python libraries (like PyTorch and Transformers), and the FastAPI code—into a single, self-contained unit called a container.
+
+Here’s exactly why we use it and what it does for your project:
+
+1. "It Works on My Machine" (Consistency)
+AI models like DistilBERT require specific versions of Python, PyTorch, and Hugging Face libraries. If you move your code from your Windows laptop to a Linux campus server, small version differences can break the model. Docker ensures that the environment inside the container is identical regardless of the host OS.
+
+2. Isolated Heavy Dependencies
+The backend uses PyTorch and Transformers, which are large and complex libraries. Docker keeps these isolated from your main system's Python installation. This means you don't have to worry about ThreatVision's requirements conflicting with other projects you might have on your PC.
+
+3. Simplified Deployment
+With the 
+docker-compose.yml
+ file I created, you can start the entire backend with one command: docker-compose up. This handles:
+
+Building the Python environment.
+Installing all 1GB+ of AI dependencies.
+Mapping the network ports.
+Loading the environment variables.
+4. GPU Scaling
+If the campus network hardware has an NVIDIA GPU, Docker (via NVIDIA Container Toolkit) makes it much easier to pass that GPU power into the backend to speed up model inference without manually installing complex CUDA drivers on the server itself.
