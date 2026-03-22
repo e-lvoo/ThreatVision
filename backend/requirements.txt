@@ -2,20 +2,21 @@ fastapi==0.109.2
 uvicorn==0.27.1
 
 pydantic==2.10.6
-pydantic-core==2.27.2
 pydantic-settings==2.1.0
 
 python-dotenv==1.0.1
 
 supabase==2.3.7
-httpx>=0.24,<0.26
+httpx==0.25.2
 requests==2.31.0
 
 slowapi==0.1.9
 python-jose[cryptography]==3.3.0
 
-# ❌ Not needed for production (testing only)
-# pytest==8.0.0
+# Force compatible versions to stop pip backtracking
+anyio==3.7.1
+starlette==0.36.3
 
-# ❌ Can cause slow/hanging builds on Render (network packet library)
+# ❌ Removed (not needed / problematic)
+# pytest==8.0.0
 # scapy==2.5.0
