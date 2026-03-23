@@ -7,7 +7,11 @@ pydantic-settings==2.1.0
 python-dotenv==1.0.1
 
 supabase==2.3.7
+
+# 🔥 Critical fixes
 httpx==0.24.1
+httpcore==0.17.3
+
 requests==2.31.0
 
 slowapi==0.1.9
@@ -16,5 +20,6 @@ python-jose[cryptography]==3.3.0
 anyio==3.7.1
 starlette==0.36.3
 
+# ❌ removed
 # pytest==8.0.0
 # scapy==2.5.0
