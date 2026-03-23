@@ -1,5 +1,5 @@
 import os
-from typing import Optional, List, Dict, Any
+from typing import Optional
 from supabase import create_client, Client
 from dotenv import load_dotenv
 import logging
@@ -14,7 +14,19 @@ class SupabaseService:
         self.key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_KEY")
         if not self.url or not self.key:
             logger.warning("Supabase credentials not found in environment variables.")
-        self.client: Client = create_client(self.url, self.key) if self.url and self.key else None
+        self.client: Optional[Client] = None
+
+    def init_client(self):
+        if self.client is not None:
+            return self.client
+
+        if not self.url or not self.key:
+            logger.warning("Supabase client not initialized because credentials are missing.")
+            return None
+
+        self.client = create_client(self.url, self.key)
+        logger.info("Supabase client initialized successfully.")
+        return self.client
 
     def log_detection(self, data: dict):
         """Insert a detection result into the database."""
@@ -113,6 +125,3 @@ class SupabaseService:
         except Exception as e:
             logger.error(f"Error fetching metrics: {e}")
             return {}
-
-# Singleton instance
-supabase_service = SupabaseService()

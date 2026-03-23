@@ -1,4 +1,4 @@
-from fastapi import FastAPI, BackgroundTasks, Depends, HTTPException, Header
+from fastapi import FastAPI, BackgroundTasks, Depends, HTTPException, Request
 from typing import Optional
 from dotenv import load_dotenv
 import logging
@@ -11,7 +11,6 @@ from contextlib import asynccontextmanager
 load_dotenv()
 
 from app.services.model_service import model_service
-from app.services.supabase_service import supabase_service
 from app.schemas.api_schemas import TrafficInput, DetectionResponse, AlertUpdate
 from app.middleware.auth import get_current_user
 
@@ -19,6 +18,10 @@ from app.middleware.auth import get_current_user
 async def lifespan(app: FastAPI):
     # Load model at startup
     model_service.load_model()
+    from app.services.supabase_service import SupabaseService
+
+    app.state.supabase_service = SupabaseService()
+    app.state.supabase_service.init_client()
     yield
     # Clean up if needed
 
@@ -26,7 +29,7 @@ app = FastAPI(title="ThreatVision Backend", version="1.0.0", lifespan=lifespan)
 
 logger = logging.getLogger(__name__)
 
-def process_analysis(input_data: TrafficInput, user_id: Optional[str] = None):
+def process_analysis(input_data: TrafficInput, supabase_service, user_id: Optional[str] = None):
     start_time = time.time()
     
     # Preprocess (simple hash for input tracking)
@@ -63,6 +66,7 @@ def process_analysis(input_data: TrafficInput, user_id: Optional[str] = None):
 
 @app.post("/analyze", response_model=DetectionResponse)
 def analyze_traffic(
+    request: Request,
     input_data: TrafficInput, 
     background_tasks: BackgroundTasks, 
     user_id: str = Depends(get_current_user)
@@ -71,27 +75,27 @@ def analyze_traffic(
     FastAPI runs regular 'def' routes in a threadpool, which is ideal
     for CPU-heavy tasks like the model prediction.
     """
-    result = process_analysis(input_data, user_id)
+    result = process_analysis(input_data, request.app.state.supabase_service, user_id)
     return result
 
 @app.get("/detections")
-async def get_detections(limit: int = 50, source_ip: Optional[str] = None, user_id: str = Depends(get_current_user)):
-    return supabase_service.get_detections(limit=limit, source_ip=source_ip)
+async def get_detections(request: Request, limit: int = 50, source_ip: Optional[str] = None, user_id: str = Depends(get_current_user)):
+    return request.app.state.supabase_service.get_detections(limit=limit, source_ip=source_ip)
 
 @app.get("/alerts")
-async def get_alerts(limit: int = 50, status: Optional[str] = None, user_id: str = Depends(get_current_user)):
-    return supabase_service.get_alerts(limit=limit, status=status)
+async def get_alerts(request: Request, limit: int = 50, status: Optional[str] = None, user_id: str = Depends(get_current_user)):
+    return request.app.state.supabase_service.get_alerts(limit=limit, status=status)
 
 @app.patch("/alerts/{alert_id}")
-async def update_alert(alert_id: str, update_data: AlertUpdate, user_id: str = Depends(get_current_user)):
-    result = supabase_service.update_alert(alert_id, update_data.model_dump(exclude_unset=True))
+async def update_alert(request: Request, alert_id: str, update_data: AlertUpdate, user_id: str = Depends(get_current_user)):
+    result = request.app.state.supabase_service.update_alert(alert_id, update_data.model_dump(exclude_unset=True))
     if not result:
         raise HTTPException(status_code=404, detail="Alert not found")
     return result
 
 @app.get("/metrics")
-async def get_metrics(user_id: str = Depends(get_current_user)):
-    return supabase_service.get_metrics()
+async def get_metrics(request: Request, user_id: str = Depends(get_current_user)):
+    return request.app.state.supabase_service.get_metrics()
 
 @app.get("/model-info")
 async def get_model_info():
