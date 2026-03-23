@@ -21,7 +21,10 @@ async def lifespan(app: FastAPI):
     from app.services.supabase_service import SupabaseService
 
     app.state.supabase_service = SupabaseService()
-    app.state.supabase_service.init_client()
+    try:
+        app.state.supabase_service.init_client()
+    except Exception as e:
+        print(f"Startup Supabase error: {e}")
     yield
     # Clean up if needed
 

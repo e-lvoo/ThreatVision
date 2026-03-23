@@ -17,15 +17,17 @@ class SupabaseService:
         self.client: Optional[Client] = None
 
     def init_client(self):
-        if self.client is not None:
-            return self.client
+        try:
+            if self.url and self.key:
+                self.client = create_client(self.url, self.key)
+                logger.info("Supabase client initialized successfully.")
+            else:
+                self.client = None
+                print("Supabase credentials not provided.")
+        except Exception as e:
+            self.client = None
+            print(f"Supabase initialization failed: {e}")
 
-        if not self.url or not self.key:
-            logger.warning("Supabase client not initialized because credentials are missing.")
-            return None
-
-        self.client = create_client(self.url, self.key)
-        logger.info("Supabase client initialized successfully.")
         return self.client
 
     def log_detection(self, data: dict):
