@@ -7,16 +7,14 @@ pydantic-settings==2.1.0
 python-dotenv==1.0.1
 
 supabase==2.3.7
-httpx==0.25.2
+httpx==0.24.1
 requests==2.31.0
 
 slowapi==0.1.9
 python-jose[cryptography]==3.3.0
 
-# Force compatible versions to stop pip backtracking
 anyio==3.7.1
 starlette==0.36.3
 
-# ❌ Removed (not needed / problematic)
 # pytest==8.0.0
 # scapy==2.5.0
