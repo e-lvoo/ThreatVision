@@ -71,14 +71,13 @@ def process_analysis(input_data: TrafficInput, supabase_service, user_id: Option
 def analyze_traffic(
     request: Request,
     input_data: TrafficInput, 
-    background_tasks: BackgroundTasks, 
-    user_id: str = Depends(get_current_user)
+    background_tasks: BackgroundTasks
 ):
     """
     FastAPI runs regular 'def' routes in a threadpool, which is ideal
     for CPU-heavy tasks like the model prediction.
     """
-    result = process_analysis(input_data, request.app.state.supabase_service, user_id)
+    result = process_analysis(input_data, request.app.state.supabase_service)
     return result
 
 @app.get("/detections")
